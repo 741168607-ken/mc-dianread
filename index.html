@@ -668,6 +668,21 @@ const toggleCnBtn = document.querySelector("#toggleCnBtn");
 const randomBtn = document.querySelector("#randomBtn");
 const player = document.querySelector("#player");
 
+// 默认音量增益 +30%（Web Audio 增益节点，支持超过 100%）
+let audioCtx = null, gainReady = false;
+function ensureAudioGain(){
+    if(gainReady) return;
+    try{
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const src = audioCtx.createMediaElementSource(player);
+        const gain = audioCtx.createGain();
+        gain.gain.value = 1.3; // +30%
+        src.connect(gain).connect(audioCtx.destination);
+        if(audioCtx.state === "suspended") audioCtx.resume();
+        gainReady = true;
+    }catch(e){ console.warn("音量增益初始化失败", e); }
+}
+
 function pad(n){ return String(n).padStart(4,"0"); }
 
 //分类标签
@@ -715,6 +730,7 @@ function renderAll(){
 }
 
 function playByIndex(idx){
+    ensureAudioGain();
     playIndex = idx;
     updatePlayingHighlight();
     autoScroll(idx);
