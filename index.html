@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft 英语点读｜真人发音版</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,-apple-system}
+body{max-width:1080px;margin:16px auto;padding:0 14px;background:#f4f7fb;}
+.header-card{background:#fff;padding:18px 22px;border-radius:14px;box-shadow:0 1px 8px #00000012;margin-bottom:14px;}
+.ctrl-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0;}
+.tab-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;}
+.tab-btn{padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;}
+.tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb;}
+.voice-btn{padding:8px 16px;border-radius:8px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer;font-weight:600;}
+.voice-btn.active{background:#16a34a;color:#fff;border-color:#16a34a;}
+.sentence-item{padding:12px 14px;border-bottom:1px solid #e8edf3;cursor:pointer;user-select:none;display:flex;align-items:center;gap:10px;}
+.sentence-item:hover{background:#edf2fc;}
+.sentence-item.playing{background:#cce0ff;}
+.sentence-item.playing .spk{animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.spk{font-size:22px;flex-shrink:0;}
+.en-line{font-size:19px;color:#0f172a;margin-bottom:4px;}
+.cn-line{font-size:16px;color:#555864;}
+.info-note{font-size:13px;color:#64748b;margin:6px 0;}
+button,select{padding:7px 12px;font-size:14px;border-radius:7px;border:1px solid #cbd5e1;cursor:pointer;}
+input[type=range]{width:130px;}
+#listWrap{background:#ffffff;border-radius:12px;box-shadow:0 1px 10px #00000014;max-height:70vh;overflow-y:auto;}
+</style>
+</head>
+<body>
+<div class="header-card">
+<h2>🎮 Minecraft英语点读｜真人发音版</h2>
+<div class="info-note">✅ 微软神经网络真人发音，预生成离线播放 · 点击句子即可朗读</div>
+
+<div class="tab-row">
+<button class="tab-btn active" data-type="all">全部句子</button>
+<button class="tab-btn" data-type="daily">📝日常简单用语</button>
+<button class="tab-btn" data-type="gameBasic">🎮游戏基础会话</button>
+<button class="tab-btn" data-type="gameAdv">⚒高阶探险红石</button>
+</div>
+
+<div class="ctrl-row">
+<label>发音人：</label>
+<button class="voice-btn active" data-voice="aria">👩 Aria 老师（自然女声）</button>
+<button class="voice-btn" data-voice="ana">🧒 Ana（小朋友声音）</button>
+</div>
+
+<div class="ctrl-row">
+<label>语速：</label>
+<input id="rateSlider" type="range" min="0.7" max="1.2" step="0.05" value="0.95">
+<span id="rateShow">0.95</span>
+<button id="toggleCnBtn">隐藏中文翻译</button>
+<button id="randomBtn">🎲随机跳一句</button>
+</div>
+<div class="info-note">点击句子播放真人朗读，再点一次停止；当前句子会高亮并自动滚动</div>
+</div>
+
+<div id="listWrap"></div>
+<audio id="player" preload="none"></audio>
+
+<script>
+const sentencePool = [
+// ========== 📝日常简单用语（最简单） ==========
+{"type":"daily","en":"Hello!","cn":"你好！"},
+{"type":"daily","en":"Hi friend!","cn":"嗨，朋友！"},
+{"type":"daily","en":"Nice to meet you.","cn":"很高兴认识你。"},
+{"type":"daily","en":"What is your name?","cn":"你叫什么名字？"},
+{"type":"daily","en":"My name is WeiLai.","cn":"我的名字是魏来。"},
+{"type":"daily","en":"Where are you from?","cn":"你来自哪里？"},
+{"type":"daily","en":"Can you speak English?","cn":"你会说英语吗？"},
+{"type":"daily","en":"Speak English please.","cn":"请说英语。"},
+{"type":"daily","en":"I can speak a little English.","cn":"我会说一点英语。"},
+{"type":"daily","en":"Can you hear me?","cn":"你能听到我说话吗？"},
+{"type":"daily","en":"I can hear you clearly.","cn":"我听得很清楚。"},
+{"type":"daily","en":"Wait for me.","cn":"等等我。"},
+{"type":"daily","en":"Wait a minute.","cn":"稍等一分钟。"},
+{"type":"daily","en":"I am coming.","cn":"我来了。"},
+{"type":"daily","en":"Come here.","cn":"过来这里。"},
+{"type":"daily","en":"Follow me.","cn":"跟我来。"},
+{"type":"daily","en":"Thank you very much.","cn":"非常谢谢你。"},
+{"type":"daily","en":"You are welcome.","cn":"不客气。"},
+{"type":"daily","en":"Sorry.","cn":"对不起。"},
+{"type":"daily","en":"I am sorry.","cn":"我很抱歉。"},
+{"type":"daily","en":"No problem.","cn":"没关系。"},
+{"type":"daily","en":"It’s okay.","cn":"没事的。"},
+{"type":"daily","en":"Here you are.","cn":"给你。"},
+{"type":"daily","en":"Do you want this?","cn":"你想要这个吗？"},
+{"type":"daily","en":"I want that one.","cn":"我想要那一个。"},
+{"type":"daily","en":"I don’t want it.","cn":"我不想要它。"},
+{"type":"daily","en":"Goodbye! See you next time.","cn":"再见！下次见。"},
+{"type":"daily","en":"See you tomorrow!","cn":"明天见！"},
+{"type":"daily","en":"Have a good time!","cn":"玩得开心！"},
+{"type":"daily","en":"Good night.","cn":"晚安。"},
+{"type":"daily","en":"What is this?","cn":"这是什么？"},
+{"type":"daily","en":"That is very cool.","cn":"那个太酷了。"},
+
+// ========== 🎮游戏基础会话（中等难度） ==========
+{"type":"gameBasic","en":"Your mic is too loud.","cn":"你的麦克风声音太大。"},
+{"type":"gameBasic","en":"Your mic is quiet.","cn":"你的麦克风声音很小。"},
+{"type":"gameBasic","en":"Push to talk please.","cn":"请用按键说话。"},
+{"type":"gameBasic","en":"Don’t make noise.","cn":"不要发出噪音。"},
+{"type":"gameBasic","en":"Please wait here.","cn":"请在这里等我。"},
+{"type":"gameBasic","en":"I’m on my way.","cn":"我正在赶过来。"},
+{"type":"gameBasic","en":"Let’s go together.","cn":"我们一起走。"},
+{"type":"gameBasic","en":"Let’s team up.","cn":"我们组队吧。"},
+{"type":"gameBasic","en":"Can I join you?","cn":"我可以加入你们吗？"},
+{"type":"gameBasic","en":"You can join us.","cn":"你可以加入我们。"},
+{"type":"gameBasic","en":"We are a team.","cn":"我们是一队的。"},
+{"type":"gameBasic","en":"Stick together.","cn":"大家待在一起。"},
+{"type":"gameBasic","en":"Don’t go alone.","cn":"不要一个人走。"},
+{"type":"gameBasic","en":"Stay close to me.","cn":"跟我靠近一点。"},
+{"type":"gameBasic","en":"Where are you?","cn":"你在哪里？"},
+{"type":"gameBasic","en":"I am over here.","cn":"我在这里。"},
+{"type":"gameBasic","en":"Look at me.","cn":"看我这边。"},
+{"type":"gameBasic","en":"Can you see me?","cn":"你能看见我吗？"},
+{"type":"gameBasic","en":"I can’t find you.","cn":"我找不到你。"},
+{"type":"gameBasic","en":"Show me your position.","cn":"告诉我你的位置。"},
+{"type":"gameBasic","en":"Where is our base?","cn":"我们的基地在哪里？"},
+{"type":"gameBasic","en":"This is my home.","cn":"这是我的家。"},
+{"type":"gameBasic","en":"This is our base.","cn":"这是我们的基地。"},
+{"type":"gameBasic","en":"Come to my house.","cn":"来我的房子。"},
+{"type":"gameBasic","en":"Let’s meet at the base.","cn":"我们在基地集合。"},
+{"type":"gameBasic","en":"Can you help me?","cn":"你可以帮帮我吗？"},
+{"type":"gameBasic","en":"I need your help.","cn":"我需要你的帮助。"},
+{"type":"gameBasic","en":"Help me please.","cn":"请帮帮我。"},
+{"type":"gameBasic","en":"Thanks for helping me.","cn":"谢谢你帮我。"},
+{"type":"gameBasic","en":"Give me that.","cn":"把那个给我。"},
+{"type":"gameBasic","en":"Can you give me some?","cn":"你可以分我一点吗？"},
+{"type":"gameBasic","en":"Please pass me the block.","cn":"请把方块递给我。"},
+{"type":"gameBasic","en":"Share your items with me.","cn":"把你的物品分我一些。"},
+{"type":"gameBasic","en":"I will give you something.","cn":"我会给你一些东西。"},
+{"type":"gameBasic","en":"Take this.","cn":"拿好这个。"},
+{"type":"gameBasic","en":"What do you need?","cn":"你需要什么？"},
+{"type":"gameBasic","en":"What do you have?","cn":"你有什么东西？"},
+{"type":"gameBasic","en":"I have many blocks.","cn":"我有很多方块。"},
+{"type":"gameBasic","en":"I don’t have enough.","cn":"我的不够。"},
+{"type":"gameBasic","en":"We need more supplies.","cn":"我们需要更多物资。"},
+{"type":"gameBasic","en":"Let’s build a house together.","cn":"我们一起建一座房子。"},
+{"type":"gameBasic","en":"I want to build a big house.","cn":"我想建一座大房子。"},
+{"type":"gameBasic","en":"Let’s build a small hut.","cn":"我们搭一间小木屋。"},
+{"type":"gameBasic","en":"We need to build walls.","cn":"我们需要砌墙。"},
+{"type":"gameBasic","en":"Put blocks here.","cn":"把方块放在这里。"},
+{"type":"gameBasic","en":"Place the block right there.","cn":"把方块就放在那儿。"},
+{"type":"gameBasic","en":"Don’t place blocks here.","cn":"不要在这里放方块。"},
+{"type":"gameBasic","en":"Break this block.","cn":"把这个方块敲掉。"},
+{"type":"gameBasic","en":"We need a roof.","cn":"我们需要一个屋顶。"},
+{"type":"gameBasic","en":"Make a door here.","cn":"在这里做一扇门。"},
+{"type":"gameBasic","en":"Add some windows.","cn":"装上一些窗户。"},
+{"type":"gameBasic","en":"This wall is too short.","cn":"这面墙太矮了。"},
+{"type":"gameBasic","en":"Make the wall higher.","cn":"把墙砌高一点。"},
+{"type":"gameBasic","en":"Let’s make a floor.","cn":"我们铺地板。"},
+{"type":"gameBasic","en":"We can build a tower.","cn":"我们可以建一座塔。"},
+{"type":"gameBasic","en":"I want to build a castle.","cn":"我想建一座城堡。"},
+{"type":"gameBasic","en":"This looks nice!","cn":"这个看起来好漂亮！"},
+{"type":"gameBasic","en":"Great job!","cn":"干得很棒！"},
+{"type":"gameBasic","en":"Well done!","cn":"做得好！"},
+{"type":"gameBasic","en":"This part is not good.","cn":"这一部分做得不好。"},
+{"type":"gameBasic","en":"We should change it.","cn":"我们应该改一改。"},
+{"type":"gameBasic","en":"Let’s decorate our home.","cn":"我们来装饰我们的家。"},
+{"type":"gameBasic","en":"Put torches on the wall.","cn":"把火把插在墙上。"},
+{"type":"gameBasic","en":"We need more torches.","cn":"我们需要更多火把。"},
+{"type":"gameBasic","en":"Light up this room.","cn":"把这个房间照亮。"},
+{"type":"gameBasic","en":"This room is dark.","cn":"这个房间很黑。"},
+{"type":"gameBasic","en":"Let’s dig a hole.","cn":"我们挖一个坑。"},
+{"type":"gameBasic","en":"Dig downwards.","cn":"向下挖。"},
+{"type":"gameBasic","en":"Don’t dig straight down.","cn":"不要垂直往下挖。"},
+{"type":"gameBasic","en":"Dig sideways.","cn":"横着挖。"},
+{"type":"gameBasic","en":"Be careful when digging.","cn":"挖矿的时候要小心。"},
+{"type":"gameBasic","en":"I found coal!","cn":"我挖到煤炭了！"},
+{"type":"gameBasic","en":"I found iron ore!","cn":"我挖到铁矿了！"},
+{"type":"gameBasic","en":"Where is iron?","cn":"铁矿在哪里？"},
+{"type":"gameBasic","en":"I found gold!","cn":"我挖到黄金了！"},
+{"type":"gameBasic","en":"Where are the diamonds?","cn":"钻石在哪里？"},
+{"type":"gameBasic","en":"I found diamonds!","cn":"我挖到钻石了！"},
+{"type":"gameBasic","en":"Wow,so many diamonds!","cn":"哇，好多钻石！"},
+{"type":"gameBasic","en":"This is deep cave.","cn":"这是很深的洞穴。"},
+{"type":"gameBasic","en":"We are in a big cave.","cn":"我们在一个大矿洞里。"},
+{"type":"gameBasic","en":"Watch out for lava.","cn":"小心岩浆。"},
+{"type":"gameBasic","en":"Don’t touch the lava.","cn":"不要碰到岩浆。"},
+{"type":"gameBasic","en":"Lava will burn you.","cn":"岩浆会把你烧掉。"},
+{"type":"gameBasic","en":"There is water here.","cn":"这里有水。"},
+{"type":"gameBasic","en":"Don’t fall into water.","cn":"不要掉进水里。"},
+{"type":"gameBasic","en":"I am falling!","cn":"我掉下去了！"},
+{"type":"gameBasic","en":"Help! I fell down.","cn":"救命！我摔下去了。"},
+{"type":"gameBasic","en":"I lost my way.","cn":"我迷路了。"},
+{"type":"gameBasic","en":"This cave is huge.","cn":"这个矿洞好大。"},
+{"type":"gameBasic","en":"We should mark our way.","cn":"我们要做好标记。"},
+{"type":"gameBasic","en":"Put torches along the path.","cn":"沿路插上火把。"},
+{"type":"gameBasic","en":"I am running out of torches.","cn":"我的火把快用完了。"},
+{"type":"gameBasic","en":"Let’s go back up.","cn":"我们往上面回去。"},
+{"type":"gameBasic","en":"Time to go home.","cn":"该回家了。"},
+{"type":"gameBasic","en":"Let’s leave the cave.","cn":"我们离开矿洞吧。"},
+{"type":"gameBasic","en":"I need wood.","cn":"我需要木头。"},
+{"type":"gameBasic","en":"I need more wood.","cn":"我需要更多木头。"},
+{"type":"gameBasic","en":"Let’s cut some trees.","cn":"我们去砍树。"},
+{"type":"gameBasic","en":"Hit the tree trunk.","cn":"击打树干。"},
+{"type":"gameBasic","en":"Collect wood logs.","cn":"收集原木。"},
+{"type":"gameBasic","en":"We have enough wood.","cn":"我们木头够了。"},
+{"type":"gameBasic","en":"I need stone.","cn":"我需要石头。"},
+{"type":"gameBasic","en":"Mine some cobblestone.","cn":"挖一点圆石。"},
+{"type":"gameBasic","en":"I need food.","cn":"我需要食物。"},
+{"type":"gameBasic","en":"I’m hungry.","cn":"我饿了。"},
+{"type":"gameBasic","en":"My hunger bar is low.","cn":"我的饥饿值很低。"},
+{"type":"gameBasic","en":"Do you have any food?","cn":"你有食物吗？"},
+{"type":"gameBasic","en":"I have some bread.","cn":"我有一些面包。"},
+{"type":"gameBasic","en":"Eat some meat.","cn":"吃点肉。"},
+{"type":"gameBasic","en":"Let’s hunt some animals.","cn":"我们去猎杀一些动物。"},
+{"type":"gameBasic","en":"Look! There is a cow.","cn":"看！那里有一头牛。"},
+{"type":"gameBasic","en":"There are sheep over there.","cn":"那边有绵羊。"},
+{"type":"gameBasic","en":"I see a pig.","cn":"我看见一头猪。"},
+{"type":"gameBasic","en":"Kill the chicken for food.","cn":"杀掉鸡获取食物。"},
+{"type":"gameBasic","en":"We can farm wheat.","cn":"我们可以种小麦。"},
+{"type":"gameBasic","en":"Let’s plant seeds.","cn":"我们种下种子。"},
+{"type":"gameBasic","en":"Water the crops.","cn":"给农作物浇水。"},
+{"type":"gameBasic","en":"Wait for it to grow.","cn":"等待它长大。"},
+{"type":"gameBasic","en":"Harvest the wheat.","cn":"收割小麦。"},
+{"type":"gameBasic","en":"Make bread from wheat.","cn":"用小麦做面包。"},
+{"type":"gameBasic","en":"Make a crafting table.","cn":"做一个工作台。"},
+{"type":"gameBasic","en":"Place the crafting table down.","cn":"把工作台放下来。"},
+{"type":"gameBasic","en":"Open the crafting table.","cn":"打开工作台。"},
+{"type":"gameBasic","en":"I need a furnace.","cn":"我需要一个熔炉。"},
+{"type":"gameBasic","en":"Put coal inside the furnace.","cn":"把煤炭放进熔炉。"},
+{"type":"gameBasic","en":"Smelt iron ore.","cn":"冶炼铁矿石。"},
+{"type":"gameBasic","en":"I got iron ingots.","cn":"我得到铁锭了。"},
+{"type":"gameBasic","en":"Make a pickaxe.","cn":"做一把镐子。"},
+{"type":"gameBasic","en":"I need a better pickaxe.","cn":"我需要一把更好的镐。"},
+{"type":"gameBasic","en":"Use diamond pickaxe.","cn":"用钻石镐。"},
+{"type":"gameBasic","en":"Make a sword.","cn":"做一把剑。"},
+{"type":"gameBasic","en":"I need a sword to fight.","cn":"我需要一把剑来战斗。"},
+{"type":"gameBasic","en":"Craft a bow and arrows.","cn":"制作弓和箭。"},
+{"type":"gameBasic","en":"I need a shield.","cn":"我需要盾牌。"},
+{"type":"gameBasic","en":"Put on your armor.","cn":"穿上你的盔甲。"},
+{"type":"gameBasic","en":"I need helmet.","cn":"我需要头盔。"},
+{"type":"gameBasic","en":"Chest plate protects you.","cn":"胸甲可以保护你。"},
+{"type":"gameBasic","en":"My armor is broken.","cn":"我的盔甲坏掉了。"},
+{"type":"gameBasic","en":"Repair your equipment.","cn":"修理你的装备。"},
+{"type":"gameBasic","en":"It’s getting dark.","cn":"天快要黑了。"},
+{"type":"gameBasic","en":"Night is coming.","cn":"夜晚要来了。"},
+{"type":"gameBasic","en":"Be careful! Night time.","cn":"小心！到晚上了。"},
+{"type":"gameBasic","en":"Monsters will spawn at night.","cn":"晚上会刷出怪物。"},
+{"type":"gameBasic","en":"Let’s find a shelter.","cn":"我们找个庇护所。"},
+{"type":"gameBasic","en":"Go inside the house.","cn":"进到屋子里面。"},
+{"type":"gameBasic","en":"Close the door.","cn":"把门关上。"},
+{"type":"gameBasic","en":"Lock the door.","cn":"把门关好。"},
+{"type":"gameBasic","en":"Don’t go outside at night.","cn":"晚上不要出去外面。"},
+{"type":"gameBasic","en":"There is a monster!","cn":"有一只怪物！"},
+{"type":"gameBasic","en":"Monster over there!","cn":"怪物在那边！"},
+{"type":"gameBasic","en":"Watch out for creeper!","cn":"小心苦力怕！"},
+{"type":"gameBasic","en":"Creeper is behind you!","cn":"苦力怕在你身后！"},
+{"type":"gameBasic","en":"Run away from creeper.","cn":"远离苦力怕。"},
+{"type":"gameBasic","en":"Don’t get close to creeper.","cn":"不要靠近苦力怕。"},
+{"type":"gameBasic","en":"Shoot the creeper.","cn":"射击苦力怕。"},
+{"type":"gameBasic","en":"Kill that zombie.","cn":"杀掉那个僵尸。"},
+{"type":"gameBasic","en":"Zombie is coming!","cn":"僵尸过来了！"},
+{"type":"gameBasic","en":"Skeleton shoots arrows.","cn":"骷髅会射箭。"},
+{"type":"gameBasic","en":"Watch the skeleton.","cn":"提防骷髅。"},
+{"type":"gameBasic","en":"Spider is on the roof.","cn":"蜘蛛在房顶上。"},
+{"type":"gameBasic","en":"Hit the spider.","cn":"打蜘蛛。"},
+{"type":"gameBasic","en":"Don’t look at enderman.","cn":"不要看末影人。"},
+{"type":"gameBasic","en":"Enderman is angry.","cn":"末影人发怒了。"},
+{"type":"gameBasic","en":"Fight together.","cn":"一起战斗。"},
+{"type":"gameBasic","en":"Attack the monster.","cn":"攻击怪物。"},
+{"type":"gameBasic","en":"Hit it with your sword.","cn":"用你的剑打它。"},
+{"type":"gameBasic","en":"Shoot it with bow.","cn":"用弓射它。"},
+{"type":"gameBasic","en":"Defend yourself.","cn":"保护好你自己。"},
+{"type":"gameBasic","en":"I’m low on health.","cn":"我的血量不多了。"},
+{"type":"gameBasic","en":"My heart is almost gone.","cn":"我的心快没了。"},
+{"type":"gameBasic","en":"I am hurt.","cn":"我受伤了。"},
+{"type":"gameBasic","en":"I took damage.","cn":"我受到伤害了。"},
+{"type":"gameBasic","en":"Eat food to heal.","cn":"吃食物恢复血量。"},
+{"type":"gameBasic","en":"Do you have healing food?","cn":"你有回血的食物吗？"},
+{"type":"gameBasic","en":"I died!","cn":"我死了！"},
+{"type":"gameBasic","en":"I just died.","cn":"我刚刚死掉了。"},
+{"type":"gameBasic","en":"Where do I respawn?","cn":"我会在哪里重生？"},
+{"type":"gameBasic","en":"I lost all my items.","cn":"我丢掉了全部物品。"},
+{"type":"gameBasic","en":"My stuff is on the ground.","cn":"我的东西掉在地上。"},
+{"type":"gameBasic","en":"Hurry to get your items.","cn":"快点捡回你的物品。"},
+{"type":"gameBasic","en":"I respawned at bed.","cn":"我在床上重生了。"},
+{"type":"gameBasic","en":"We need to set spawn point.","cn":"我们要设置重生点。"},
+{"type":"gameBasic","en":"Place down a bed.","cn":"放下一张床。"},
+{"type":"gameBasic","en":"Sleep in the bed.","cn":"在床上睡觉。"},
+{"type":"gameBasic","en":"Skip the night.","cn":"跳过夜晚。"},
+{"type":"gameBasic","en":"Can we sleep now?","cn":"我们现在可以睡觉吗？"},
+{"type":"gameBasic","en":"It is morning now.","cn":"现在是早上了。"},
+{"type":"gameBasic","en":"Daytime is safe.","cn":"白天是安全的。"},
+{"type":"gameBasic","en":"Monsters burn in sunlight.","cn":"怪物会在阳光下燃烧。"},
+
+// ========== ⚒高阶游戏探险红石（长句、复杂场景） ==========
+{"type":"gameAdv","en":"Let’s explore.","cn":"我们去探险。"},
+{"type":"gameAdv","en":"Let’s go travelling.","cn":"我们出去旅行。"},
+{"type":"gameAdv","en":"What is over that hill?","cn":"小山那边是什么？"},
+{"type":"gameAdv","en":"Climb up the mountain.","cn":"爬上这座山。"},
+{"type":"gameAdv","en":"The view is beautiful.","cn":"风景很美。"},
+{"type":"gameAdv","en":"This is a forest.","cn":"这里是森林。"},
+{"type":"gameAdv","en":"We are in desert.","cn":"我们在沙漠。"},
+{"type":"gameAdv","en":"Look at the big desert temple.","cn":"看这座巨大沙漠神殿。"},
+{"type":"gameAdv","en":"Don’t step on pressure plate.","cn":"不要踩压力板。"},
+{"type":"gameAdv","en":"There is treasure inside.","cn":"里面有宝藏。"},
+{"type":"gameAdv","en":"This is snow biome.","cn":"这里是雪地生物群系。"},
+{"type":"gameAdv","en":"It is very cold here.","cn":"这里非常冷。"},
+{"type":"gameAdv","en":"I see a village.","cn":"我看见一座村庄。"},
+{"type":"gameAdv","en":"We found a village!","cn":"我们找到村庄了！"},
+{"type":"gameAdv","en":"There are villagers here.","cn":"这里有村民。"},
+{"type":"gameAdv","en":"Villager can trade goods.","cn":"村民可以交易物品。"},
+{"type":"gameAdv","en":"Protect the village.","cn":"保护村庄。"},
+{"type":"gameAdv","en":"Don’t hurt villagers.","cn":"不要伤害村民。"},
+{"type":"gameAdv","en":"This is abandoned mine.","cn":"这是废弃矿井。"},
+{"type":"gameAdv","en":"Be careful in mine.","cn":"在矿井里要小心。"},
+{"type":"gameAdv","en":"I found chest!","cn":"我找到箱子了！"},
+{"type":"gameAdv","en":"Open the chest.","cn":"打开箱子。"},
+{"type":"gameAdv","en":"Put items inside chest.","cn":"把物品放进箱子。"},
+{"type":"gameAdv","en":"Store your things here.","cn":"把你的东西存在这里。"},
+{"type":"gameAdv","en":"Take goods out of chest.","cn":"从箱子拿出物品。"},
+{"type":"gameAdv","en":"Don’t take other people’s stuff.","cn":"不要拿别人的东西。"},
+{"type":"gameAdv","en":"This chest is mine.","cn":"这个箱子是我的。"},
+{"type":"gameAdv","en":"Make more storage boxes.","cn":"多做一些储物箱。"},
+{"type":"gameAdv","en":"Let’s go fishing.","cn":"我们去钓鱼。"},
+{"type":"gameAdv","en":"Make a fishing rod.","cn":"做一根钓鱼竿。"},
+{"type":"gameAdv","en":"Throw the hook into water.","cn":"把鱼钩甩进水里。"},
+{"type":"gameAdv","en":"I catch a fish!","cn":"我钓到一条鱼！"},
+{"type":"gameAdv","en":"We can fish for treasure.","cn":"我们钓鱼可以钓出宝藏。"},
+{"type":"gameAdv","en":"Let’s breed animals.","cn":"我们来繁殖动物。"},
+{"type":"gameAdv","en":"Feed wheat to the sheep.","cn":"喂小麦给绵羊。"},
+{"type":"gameAdv","en":"Baby lamb is born.","cn":"小羊宝宝出生了。"},
+{"type":"gameAdv","en":"Build an animal farm.","cn":"建一个动物农场。"},
+{"type":"gameAdv","en":"We need fence.","cn":"我们需要栅栏。"},
+{"type":"gameAdv","en":"Put fence around farm.","cn":"农场四周围上栅栏。"},
+{"type":"gameAdv","en":"Don’t let animals run away.","cn":"不要让动物跑掉。"},
+{"type":"gameAdv","en":"I want to go nether.","cn":"我想去下界。"},
+{"type":"gameAdv","en":"Build nether portal.","cn":"搭建下界传送门。"},
+{"type":"gameAdv","en":"Use obsidian blocks.","cn":"使用黑曜石方块。"},
+{"type":"gameAdv","en":"Light portal with flint and steel.","cn":"用打火石点燃传送门。"},
+{"type":"gameAdv","en":"Step into the portal.","cn":"走进传送门。"},
+{"type":"gameAdv","en":"We are in the nether now.","cn":"我们现在到下界了。"},
+{"type":"gameAdv","en":"Nether is very dangerous.","cn":"下界非常危险。"},
+{"type":"gameAdv","en":"Watch out for ghast.","cn":"小心恶魂。"},
+{"type":"gameAdv","en":"Ghast shoots fireballs.","cn":"恶魂会发射火球。"},
+{"type":"gameAdv","en":"Don’t get hit by fireball.","cn":"不要被火球打中。"},
+{"type":"gameAdv","en":"Piglins live here.","cn":"猪灵生活在这里。"},
+{"type":"gameAdv","en":"Give gold to piglin.","cn":"把黄金丢给猪灵。"},
+{"type":"gameAdv","en":"Piglin will give you gifts.","cn":"猪灵会回赠你礼物。"},
+{"type":"gameAdv","en":"Find nether fortress.","cn":"寻找下界堡垒。"},
+{"type":"gameAdv","en":"Blaze spawner is here.","cn":"这里有烈焰人刷怪笼。"},
+{"type":"gameAdv","en":"Get blaze rods.","cn":"拿到烈焰棒。"},
+{"type":"gameAdv","en":"Time to go back to overworld.","cn":"该回到主世界了。"},
+{"type":"gameAdv","en":"Go back through portal.","cn":"穿过传送门回去。"},
+{"type":"gameAdv","en":"I want to fight ender dragon.","cn":"我想去打末影龙。"},
+{"type":"gameAdv","en":"We need ender eyes.","cn":"我们需要末影之眼。"},
+{"type":"gameAdv","en":"Throw ender eye to find stronghold.","cn":"扔末影之眼寻找要塞。"},
+{"type":"gameAdv","en":"Stronghold is underground.","cn":"要塞在地下。"},
+{"type":"gameAdv","en":"Find end portal room.","cn":"找到末地传送门房间。"},
+{"type":"gameAdv","en":"Fill all end portal frames.","cn":"把全部末地传送门框架填满。"},
+{"type":"gameAdv","en":"Jump into end portal.","cn":"跳进末地传送门。"},
+{"type":"gameAdv","en":"We are in the end.","cn":"我们来到末地。"},
+{"type":"gameAdv","en":"Ender dragon is flying.","cn":"末影龙正在飞。"},
+{"type":"gameAdv","en":"Shoot the dragon with bow.","cn":"用弓射击龙。"},
+{"type":"gameAdv","en":"Destroy end crystal first.","cn":"先摧毁末影水晶。"},
+{"type":"gameAdv","en":"We beat the dragon!","cn":"我们打败末影龙了！"},
+{"type":"gameAdv","en":"Great victory!","cn":"巨大的胜利！"},
+{"type":"gameAdv","en":"Go back home.","cn":"回到家里。"},
+{"type":"gameAdv","en":"Let’s play minigame.","cn":"我们玩小游戏。"},
+{"type":"gameAdv","en":"Let’s race together.","cn":"我们来比赛跑步。"},
+{"type":"gameAdv","en":"Who can run faster?","cn":"谁可以跑得更快？"},
+{"type":"gameAdv","en":"Jump over this gap.","cn":"跳过这个缺口。"},
+{"type":"gameAdv","en":"Don’t fall down.","cn":"不要掉下去。"},
+{"type":"gameAdv","en":"Let’s play hide and seek.","cn":"我们玩捉迷藏。"},
+{"type":"gameAdv","en":"I will hide.","cn":"我来藏。"},
+{"type":"gameAdv","en":"You go seek.","cn":"你来寻找。"},
+{"type":"gameAdv","en":"Count from one to ten.","cn":"从一数到十。"},
+{"type":"gameAdv","en":"I found you!","cn":"我找到你了！"},
+{"type":"gameAdv","en":"Where are you hiding?","cn":"你藏在哪里？"},
+{"type":"gameAdv","en":"Let’s build redstone machine.","cn":"我们做红石机器。"},
+{"type":"gameAdv","en":"Place redstone dust.","cn":"铺上红石粉。"},
+{"type":"gameAdv","en":"Push the button.","cn":"按下按钮。"},
+{"type":"gameAdv","en":"Pull the lever.","cn":"扳下拉杆。"},
+{"type":"gameAdv","en":"This is redstone trap.","cn":"这是红石陷阱。"},
+{"type":"gameAdv","en":"Make automatic door.","cn":"做自动门。"},
+{"type":"gameAdv","en":"Water flows here.","cn":"水从这里流出来。"},
+{"type":"gameAdv","en":"Build a piston door.","cn":"造活塞门。"},
+{"type":"gameAdv","en":"This machine works.","cn":"这个机器可以运行。"},
+{"type":"gameAdv","en":"Machine is broken.","cn":"机器坏掉了。"},
+{"type":"gameAdv","en":"Fix the redstone circuit.","cn":"修好红石电路。"},
+{"type":"gameAdv","en":"Can you fly?","cn":"你可以飞吗？"},
+{"type":"gameAdv","en":"Double‑jump to fly.","cn":"按两下跳跃键飞行。"},
+{"type":"gameAdv","en":"Fly up high.","cn":"向高处飞。"},
+{"type":"gameAdv","en":"Fly down slowly.","cn":"慢慢向下飞。"},
+{"type":"gameAdv","en":"Stop flying.","cn":"停止飞行。"},
+{"type":"gameAdv","en":"Don’t fly too fast.","cn":"不要飞得太快。"},
+{"type":"gameAdv","en":"Let’s fly above our base.","cn":"我们飞到基地上空。"},
+{"type":"gameAdv","en":"Look down from sky.","cn":"从天上往下看。"},
+{"type":"gameAdv","en":"Switch to creative mode.","cn":"切换创造模式。"},
+{"type":"gameAdv","en":"We can get any block.","cn":"我们可以拿到任意方块。"},
+{"type":"gameAdv","en":"Survival mode is hard.","cn":"生存模式很难。"},
+{"type":"gameAdv","en":"Let’s play survival together.","cn":"我们一起玩生存。"},
+{"type":"gameAdv","en":"Do not cheat.","cn":"不要作弊。"},
+{"type":"gameAdv","en":"Please do not destroy my building.","cn":"请不要破坏我的建筑。"},
+{"type":"gameAdv","en":"Don’t break my house.","cn":"不要拆我的房子。"},
+{"type":"gameAdv","en":"Please don’t grief.","cn":"请不要搞破坏。"},
+{"type":"gameAdv","en":"Put back that block.","cn":"把那个方块放回去。"},
+{"type":"gameAdv","en":"That is not funny.","cn":"那样不好玩。"},
+{"type":"gameAdv","en":"Be nice to everyone.","cn":"友善对待每一个人。"},
+{"type":"gameAdv","en":"Let’s be friends.","cn":"我们做朋友吧。"},
+{"type":"gameAdv","en":"Can you play with me?","cn":"你可以陪我玩吗？"},
+{"type":"gameAdv","en":"I am having fun.","cn":"我玩得很开心。"},
+{"type":"gameAdv","en":"This game is awesome.","cn":"这个游戏太棒了。"},
+{"type":"gameAdv","en":"What time is it?","cn":"现在几点了？"},
+{"type":"gameAdv","en":"I have to stop playing.","cn":"我必须停止游戏了。"},
+{"type":"gameAdv","en":"My play time is over.","cn":"我的游戏时间到了。"},
+{"type":"gameAdv","en":"I need to go.","cn":"我得走了。"},
+{"type":"gameAdv","en":"I’m going to bed. Bye everyone.","cn":"我要睡觉了，大家拜拜。"},
+{"type":"gameAdv","en":"Have a good rest.","cn":"好好休息。"},
+{"type":"gameAdv","en":"How to make this?","cn":"这个怎么做？"},
+{"type":"gameAdv","en":"Show me how to craft it.","cn":"演示给我看怎么合成。"},
+{"type":"gameAdv","en":"How does it work?","cn":"它是怎么工作的？"},
+{"type":"gameAdv","en":"Is this dangerous?","cn":"这个危险吗？"},
+{"type":"gameAdv","en":"Is this useful?","cn":"这个有用吗？"},
+{"type":"gameAdv","en":"That looks strange.","cn":"那个看起来很奇怪。"},
+{"type":"gameAdv","en":"It is too big.","cn":"它太大了。"},
+{"type":"gameAdv","en":"It is too small.","cn":"它太小了。"},
+{"type":"gameAdv","en":"Too slow.","cn":"太慢了。"},
+{"type":"gameAdv","en":"Too fast.","cn":"太快了。"},
+{"type":"gameAdv","en":"That costs many materials.","cn":"那要消耗很多材料。"},
+{"type":"gameAdv","en":"We don’t have enough resources.","cn":"我们资源不够。"},
+{"type":"gameAdv","en":"Collect more resources.","cn":"收集更多资源。"},
+{"type":"gameAdv","en":"Where can I find this material?","cn":"我在哪里可以找到这个材料？"},
+{"type":"gameAdv","en":"I lost my pickaxe.","cn":"我的镐子弄丢了。"},
+{"type":"gameAdv","en":"Where is my sword?","cn":"我的剑去哪里了？"},
+{"type":"gameAdv","en":"I dropped my tool.","cn":"我把工具弄丢了。"},
+{"type":"gameAdv","en":"Don’t throw good items away.","cn":"不要把好东西丢掉。"},
+{"type":"gameAdv","en":"Pick up your items.","cn":"捡起你的物品。"},
+{"type":"gameAdv","en":"My inventory is full.","cn":"我的物品栏满了。"},
+{"type":"gameAdv","en":"I have no empty slot.","cn":"我没有空格子了。"},
+{"type":"gameAdv","en":"Throw away useless things.","cn":"丢掉没用的东西。"},
+{"type":"gameAdv","en":"Sort your inventory.","cn":"整理你的物品栏。"},
+{"type":"gameAdv","en":"Move item to another slot.","cn":"把物品挪到别的格子。"},
+{"type":"gameAdv","en":"Hold shift to move fast.","cn":"按住shift快速移动。"},
+{"type":"gameAdv","en":"Right‑click the block.","cn":"右键点击方块。"},
+{"type":"gameAdv","en":"Left‑click to break block.","cn":"左键敲碎方块。"},
+{"type":"gameAdv","en":"Sneak so you don’t fall.","cn":"按住潜行防止掉下去。"},
+{"type":"gameAdv","en":"Sneak on the edge.","cn":"在边缘一定要潜行。"},
+{"type":"gameAdv","en":"Don’t run near cliff.","cn":"不要在悬崖边奔跑。"},
+{"type":"gameAdv","en":"You might fall off.","cn":"你可能会摔下去。"},
+{"type":"gameAdv","en":"Jump across the gap carefully.","cn":"小心跳过缺口。"},
+{"type":"gameAdv","en":"I almost fell.","cn":"我差点掉下去。"},
+{"type":"gameAdv","en":"That was close!","cn":"好险！"},
+{"type":"gameAdv","en":"Swim in the water.","cn":"在水里游泳。"},
+{"type":"gameAdv","en":"Don’t stay under water too long.","cn":"不要在水下待太久。"},
+{"type":"gameAdv","en":"Your oxygen will run out.","cn":"你的氧气会耗尽。"},
+{"type":"gameAdv","en":"Go up for air.","cn":"上去呼吸空气。"},
+{"type":"gameAdv","en":"I am drowning.","cn":"我快要溺水了。"},
+{"type":"gameAdv","en":"This ocean is deep.","cn":"这片海洋很深。"},
+{"type":"gameAdv","en":"There is a ship wreck.","cn":"这里有沉船。"},
+{"type":"gameAdv","en":"Look for treasure chest under sea.","cn":"在海底寻找宝藏箱。"},
+{"type":"gameAdv","en":"Guardian is in ocean monument.","cn":"海底神殿有守卫者。"},
+{"type":"gameAdv","en":"They will shoot laser at you.","cn":"它们会对你发射激光。"},
+{"type":"gameAdv","en":"Be careful underwater.","cn":"在水下要小心。"},
+{"type":"gameAdv","en":"Let’s go back to land.","cn":"我们回到陆地上。"},
+{"type":"gameAdv","en":"Ride the horse.","cn":"骑上马。"},
+{"type":"gameAdv","en":"Tame this horse.","cn":"驯服这匹马。"},
+{"type":"gameAdv","en":"Put saddle on horse.","cn":"给马装上马鞍。"},
+{"type":"gameAdv","en":"Horse can run fast.","cn":"马可以跑得很快。"},
+{"type":"gameAdv","en":"Don’t hit your horse.","cn":"不要打你的马。"},
+{"type":"gameAdv","en":"I want a pet wolf.","cn":"我想要一只宠物狼。"},
+{"type":"gameAdv","en":"Feed bone to wolf.","cn":"喂骨头给狼。"},
+{"type":"gameAdv","en":"Wolf becomes your dog.","cn":"狼会变成你的小狗。"},
+{"type":"gameAdv","en":"Dog will fight for you.","cn":"小狗会为你战斗。"},
+{"type":"gameAdv","en":"Sit boy.","cn":"坐下。"},
+{"type":"gameAdv","en":"Stand up.","cn":"站起来。"},
+{"type":"gameAdv","en":"Follow me boy.","cn":"跟我来。"},
+{"type":"gameAdv","en":"Don’t hurt my dog.","cn":"不要伤害我的狗。"},
+{"type":"gameAdv","en":"Tame the cat.","cn":"驯服猫咪。"},
+{"type":"gameAdv","en":"Cat scares creepers.","cn":"猫可以吓走苦力怕。"},
+{"type":"gameAdv","en":"Parrot can sit on your shoulder.","cn":"鹦鹉可以站在你的肩膀。"},
+{"type":"gameAdv","en":"This animal is friendly.","cn":"这个动物很友好。"},
+{"type":"gameAdv","en":"Don’t kill peaceful animals.","cn":"不要杀死温顺动物。"},
+{"type":"gameAdv","en":"Let’s make a banner.","cn":"我们做一面旗帜。"},
+{"type":"gameAdv","en":"Put banner on wall.","cn":"把旗帜挂墙上。"},
+{"type":"gameAdv","en":"Color the wool red.","cn":"把羊毛染成红色。"},
+{"type":"gameAdv","en":"We can make many colors.","cn":"我们可以做出很多颜色。"},
+{"type":"gameAdv","en":"Plant flowers around house.","cn":"房子周围种上花。"},
+{"type":"gameAdv","en":"This flower looks pretty.","cn":"这朵花很好看。"},
+{"type":"gameAdv","en":"Cut grass with shears.","cn":"用剪刀剪草。"},
+{"type":"gameAdv","en":"Let’s make a big farm.","cn":"我们建一个大农场。"},
+{"type":"gameAdv","en":"Grow carrots and potatoes.","cn":"种植胡萝卜和土豆。"},
+{"type":"gameAdv","en":"Carrot is good food.","cn":"胡萝卜是很好的食物。"},
+{"type":"gameAdv","en":"Bake potato in furnace.","cn":"在熔炉烤土豆。"},
+{"type":"gameAdv","en":"Sugar cane grows beside water.","cn":"甘蔗长在水边。"},
+{"type":"gameAdv","en":"Harvest sugar cane.","cn":"收割甘蔗。"},
+{"type":"gameAdv","en":"Make paper from sugar cane.","cn":"用甘蔗做纸。"},
+{"type":"gameAdv","en":"Book is made from paper.","cn":"书是用纸做的。"},
+{"type":"gameAdv","en":"Enchant your weapon.","cn":"给你的武器附魔。"},
+{"type":"gameAdv","en":"Build enchantment table.","cn":"搭建附魔台。"},
+{"type":"gameAdv","en":"Put bookshelves around it.","cn":"四周放上书架。"},
+{"type":"gameAdv","en":"Use lapis lazuli for enchant.","cn":"用青金石进行附魔。"},
+{"type":"gameAdv","en":"This sword has sharp enchant.","cn":"这把剑有锋利附魔。"},
+{"type":"gameAdv","en":"Unbreaking makes tool last long.","cn":"耐久可以让工具用更久。"},
+{"type":"gameAdv","en":"Mending is very good enchant.","cn":"经验修补是非常好的附魔。"},
+{"type":"gameAdv","en":"Enchant your armor too.","cn":"也给你的盔甲附魔。"},
+{"type":"gameAdv","en":"Anvil can repair items.","cn":"铁砧可以修复物品。"},
+{"type":"gameAdv","en":"Combine two swords on anvil.","cn":"在铁砧合并两把剑。"},
+{"type":"gameAdv","en":"Rename your item on anvil.","cn":"在铁砧重命名你的物品。"},
+{"type":"gameAdv","en":"This costs experience points.","cn":"这会消耗经验值。"},
+{"type":"gameAdv","en":"Kill mobs to get exp.","cn":"击杀怪物获取经验。"},
+{"type":"gameAdv","en":"My experience level goes up.","cn":"我的经验等级上升了。"},
+{"type":"gameAdv","en":"I need more exp levels.","cn":"我需要更多经验等级。"},
+{"type":"gameAdv","en":"Let’s make xp farm.","cn":"我们做一个经验农场。"},
+{"type":"gameAdv","en":"Monster spawner gives lots exp.","cn":"怪物刷怪笼产出大量经验。"},
+{"type":"gameAdv","en":"Turn off the spawner.","cn":"关掉刷怪笼。"},
+{"type":"gameAdv","en":"Light up with torches.","cn":"插上火把点亮。"},
+{"type":"gameAdv","en":"Let’s go exploring underwater ruins.","cn":"我们去探索水下遗迹。"},
+{"type":"gameAdv","en":"Prismarine blocks look nice.","cn":"海晶石方块很好看。"},
+{"type":"gameAdv","en":"We can use prismarine for building.","cn":"我们可以用海晶石来建造。"},
+{"type":"gameAdv","en":"Do you want to go boating?","cn":"你想坐船吗？"},
+{"type":"gameAdv","en":"Craft a boat.","cn":"合成一艘船。"},
+{"type":"gameAdv","en":"Place boat on water.","cn":"把船放到水面上。"},
+{"type":"gameAdv","en":"Get into the boat.","cn":"坐进船里。"},
+{"type":"gameAdv","en":"Row the boat forward.","cn":"划船向前走。"},
+{"type":"gameAdv","en":"Don’t hit boat with sword.","cn":"不要用剑打到船。"},
+{"type":"gameAdv","en":"Boat will break.","cn":"船会坏掉。"},
+{"type":"gameAdv","en":"Get out of boat.","cn":"离开小船。"},
+{"type":"gameAdv","en":"Let’s sail across the sea.","cn":"我们航行穿过大海。"},
+{"type":"gameAdv","en":"I see land far away.","cn":"我看见远处的陆地。"},
+{"type":"gameAdv","en":"This trip takes long time.","cn":"这趟旅途要花很久。"},
+{"type":"gameAdv","en":"We should bring enough food.","cn":"我们要带上足够食物。"},
+{"type":"gameAdv","en":"Bring many torches too.","cn":"也要带上很多火把。"},
+{"type":"gameAdv","en":"Don’t forget your tools.","cn":"不要忘记你的工具。"},
+{"type":"gameAdv","en":"We can get lost far away from home.","cn":"离家太远我们会迷路。"},
+{"type":"gameAdv","en":"Write down coordinates.","cn":"记下坐标。"},
+{"type":"gameAdv","en":"What are your coordinates?","cn":"你的坐标是多少？"},
+{"type":"gameAdv","en":"My X Y Z is …","cn":"我的XYZ坐标是……"},
+{"type":"gameAdv","en":"Write home coordinate on paper.","cn":"把家里坐标记下来。"},
+{"type":"gameAdv","en":"Follow coordinate numbers to get back.","cn":"按照坐标数字找回去。"},
+{"type":"gameAdv","en":"Compass points to your spawn.","cn":"指南针指向你的重生点。"},
+{"type":"gameAdv","en":"Make a map.","cn":"做一张地图。"},
+{"type":"gameAdv","en":"Hold map in your hand.","cn":"手里拿着地图。"},
+{"type":"gameAdv","en":"Map shows where you have walked.","cn":"地图显示你走过的地方。"},
+{"type":"gameAdv","en":"Expand the map.","cn":"把地图扩大。"},
+{"type":"gameAdv","en":"Put map into item frame.","cn":"把地图放进物品展示框。"},
+{"type":"gameAdv","en":"We can see big map on wall.","cn":"我们可以在墙上看大地图。"},
+{"type":"gameAdv","en":"Let’s build a railway.","cn":"我们修一条铁路。"},
+{"type":"gameAdv","en":"Lay down rail tracks.","cn":"铺上铁轨。"},
+{"type":"gameAdv","en":"Minecart drives on rail.","cn":"矿车在铁轨上行驶。"},
+{"type":"gameAdv","en":"Hop into minecart.","cn":"跳进矿车。"},
+{"type":"gameAdv","en":"Power rail needs redstone torch.","cn":"动力铁轨需要红石火把。"},
+{"type":"gameAdv","en":"Minecart goes very fast.","cn":"矿车跑得非常快。"},
+{"type":"gameAdv","en":"This is fast way to travel.","cn":"这是快速出行方式。"},
+{"type":"gameAdv","en":"Stop the minecart.","cn":"停下矿车。"},
+{"type":"gameAdv","en":"Get out from minecart.","cn":"从矿车出来。"},
+{"type":"gameAdv","en":"Do not stand on rail.","cn":"不要站在铁轨上。"},
+{"type":"gameAdv","en":"Minecart will hit you.","cn":"矿车会撞到你。"},
+{"type":"gameAdv","en":"I want to build elevator.","cn":"我想造电梯。"},
+{"type":"gameAdv","en":"Water bubble elevator.","cn":"水气泡电梯。"},
+{"type":"gameAdv","en":"Soul sand makes bubble go up.","cn":"灵魂沙产生向上气泡。"},
+{"type":"gameAdv","en":"Magma block pulls you down.","cn":"岩浆块把你往下拉。"},
+{"type":"gameAdv","en":"Swim up in bubble column.","cn":"在气泡柱里向上浮。"},
+{"type":"gameAdv","en":"That elevator works great!","cn":"这个电梯运行太棒了！"},
+{"type":"gameAdv","en":"Let’s make automatic farm.","cn":"我们做自动农场。"},
+{"type":"gameAdv","en":"Water pushes crops to hopper.","cn":"水流把作物推进漏斗。"},
+{"type":"gameAdv","en":"Hopper sends items into chest.","cn":"漏斗把物品送入箱子。"},
+{"type":"gameAdv","en":"Everything collects automatically.","cn":"全部东西自动收集。"},
+{"type":"gameAdv","en":"Wow this is so convenient.","cn":"哇，这个太方便了。"},
+{"type":"gameAdv","en":"We need more hoppers.","cn":"我们需要更多漏斗。"},
+{"type":"gameAdv","en":"Dispenser shoots arrows.","cn":"发射器可以射出箭。"},
+{"type":"gameAdv","en":"Dropper drops items out.","cn":"投掷器把物品丢出来。"},
+{"type":"gameAdv","en":"Observer detects block change.","cn":"侦测器检测方块变化。"},
+{"type":"gameAdv","en":"Piston pushes block forward.","cn":"活塞把方块向前推。"},
+{"type":"gameAdv","en":"Sticky piston pulls block back.","cn":"粘性活塞把方块拉回来。"},
+{"type":"gameAdv","en":"Redstone repeater delays signal.","cn":"红石中继器延迟信号。"},
+{"type":"gameAdv","en":"Compare signal with comparator.","cn":"用比较器对比信号。"},
+{"type":"gameAdv","en":"Redstone lamp lights up.","cn":"红石灯亮起来。"},
+{"type":"gameAdv","en":"Turn off redstone lamp.","cn":"关掉红石灯。"},
+{"type":"gameAdv","en":"Let’s make redstone door bell.","cn":"我们做红石门铃。"},
+{"type":"gameAdv","en":"Push button and bell rings.","cn":"按下按钮铃铛就响。"},
+{"type":"gameAdv","en":"That is really clever.","cn":"这个设计真聪明。"},
+{"type":"gameAdv","en":"Can you teach me redstone?","cn":"你可以教我红石吗？"},
+{"type":"gameAdv","en":"I want to learn redstone.","cn":"我想要学习红石。"},
+{"type":"gameAdv","en":"Redstone is a little hard.","cn":"红石有一点难。"},
+{"type":"gameAdv","en":"Take your time to learn.","cn":"慢慢学不要急。"},
+{"type":"gameAdv","en":"Practice many times.","cn":"多多练习。"},
+{"type":"gameAdv","en":"Soon you will understand it.","cn":"很快你就会弄懂。"},
+{"type":"gameAdv","en":"Let’s make fireworks.","cn":"我们制作烟花。"},
+{"type":"gameAdv","en":"Put gunpowder and paper together.","cn":"把火药和纸放一起。"},
+{"type":"gameAdv","en":"Add firework star for color.","cn":"加入烟花之星获得颜色。"},
+{"type":"gameAdv","en":"Launch firework rocket.","cn":"发射烟花火箭。"},
+{"type":"gameAdv","en":"Wow beautiful fireworks!","cn":"哇，漂亮的烟花！"},
+{"type":"gameAdv","en":"Firework flies high in sky.","cn":"烟花飞向高高的天空。"},
+{"type":"gameAdv","en":"We can use firework with elytra.","cn":"我们可以用烟花配合鞘翅。"},
+{"type":"gameAdv","en":"Find elytra in end city.","cn":"在末地城找到鞘翅。"},
+{"type":"gameAdv","en":"Put elytra on chest slot.","cn":"把鞘翅穿在胸甲位置。"},
+{"type":"gameAdv","en":"Jump off high place to glide.","cn":"从高处跳下去滑翔。"},
+{"type":"gameAdv","en":"Use firework to boost speed.","cn":"用烟花提升速度。"},
+{"type":"gameAdv","en":"Glide over the whole world.","cn":"滑翔飞过整个世界。"},
+{"type":"gameAdv","en":"Be careful not to crash.","cn":"小心不要撞上去。"},
+{"type":"gameAdv","en":"I crashed into mountain!","cn":"我撞到山上了！"},
+{"type":"gameAdv","en":"That hurt a lot.","cn":"摔得好痛。"},
+{"type":"gameAdv","en":"Repair elytra with phantom membrane.","cn":"用幻翼膜修复鞘翅。"},
+{"type":"gameAdv","en":"Phantom flies at night when you don’t sleep.","cn":"你不睡觉幻翼会在夜晚飞来。"},
+{"type":"gameAdv","en":"Sleep to stop phantom spawning.","cn":"睡一觉就不会刷幻翼。"},
+{"type":"gameAdv","en":"I saw a witch hut in swamp.","cn":"我在沼泽看见女巫小屋。"},
+{"type":"gameAdv","en":"Witch throws harmful potions.","cn":"女巫会扔有害药水。"},
+{"type":"gameAdv","en":"Brew potions in brewing stand.","cn":"在酿造台酿造药水。"},
+{"type":"gameAdv","en":"Nether wart is base for potion.","cn":"地狱疣是药水基底。"},
+{"type":"gameAdv","en":"Drink speed potion.","cn":"喝下速度药水。"},
+{"type":"gameAdv","en":"Drink jump boost potion.","cn":"喝下跳跃提升药水。"},
+{"type":"gameAdv","en":"Regeneration potion heals you.","cn":"再生药水恢复你的血量。"},
+{"type":"gameAdv","en":"Strength potion makes hit stronger.","cn":"力量药水让攻击更强。"},
+{"type":"gameAdv","en":"Potion of fire resistance.","cn":"抗火药水。"},
+{"type":"gameAdv","en":"Swim in lava with fire resist.","cn":"有抗火就可以在岩浆游泳。"},
+{"type":"gameAdv","en":"Make splash potion to throw.","cn":"做喷溅药水可以扔出去。"},
+{"type":"gameAdv","en":"Lingering potion leaves cloud.","cn":"滞留药水留下药水云。"},
+{"type":"gameAdv","en":"Potions have limited time.","cn":"药水有持续时间限制。"},
+{"type":"gameAdv","en":"Time runs out soon.","cn":"时间很快就结束。"},
+{"type":"gameAdv","en":"Drink milk to clear potion effect.","cn":"喝牛奶清除药水效果。"},
+{"type":"gameAdv","en":"We can make tipped arrows.","cn":"我们可以做药箭。"},
+{"type":"gameAdv","en":"Arrow carries potion effect.","cn":"箭附带药水效果。"},
+{"type":"gameAdv","en":"This arrow poisons enemy.","cn":"这支箭会让敌人中毒。"},
+{"type":"gameAdv","en":"Let’s go raid the outpost.","cn":"我们去袭击掠夺者前哨站。"},
+{"type":"gameAdv","en":"Pillager has crossbow.","cn":"掠夺者拿着弩。"},
+{"type":"gameAdv","en":"Watch out for pillager captain.","cn":"小心掠夺者队长。"},
+{"type":"gameAdv","en":"Bad omen effect starts raid.","cn":"不祥之兆会触发劫掠。"},
+{"type":"gameAdv","en":"Defend the village from raid.","cn":"保卫村庄抵御劫掠。"},
+{"type":"gameAdv","en":"Fight all pillager waves.","cn":"打退所有掠夺者波次。"},
+{"type":"gameAdv","en":"We won the raid!","cn":"我们打赢劫掠了！"},
+{"type":"gameAdv","en":"Villager give you gifts.","cn":"村民送给你礼物。"},
+{"type":"gameAdv","en":"Hero of the village effect.","cn":"村庄英雄效果。"},
+{"type":"gameAdv","en":"Villager trade price becomes cheaper.","cn":"村民交易价格变便宜。"},
+{"type":"gameAdv","en":"Build villager trading hall.","cn":"建造村民交易大厅。"},
+{"type":"gameAdv","en":"Lock villager profession.","cn":"锁定村民职业。"},
+{"type":"gameAdv","en":"Librarian sells enchanted books.","cn":"图书管理员卖附魔书。"},
+{"type":"gameAdv","en":"Farmer trades crops.","cn":"农民交易农作物。"},
+{"type":"gameAdv","en":"Armorer sells armor.","cn":"盔甲匠售卖盔甲。"},
+{"type":"gameAdv","en":"We can get good deals.","cn":"我们可以拿到划算交易。"},
+{"type":"gameAdv","en":"Don’t hit the villager.","cn":"不要击打村民。"},
+{"type":"gameAdv","en":"If you hit them price rises.","cn":"如果你打他们价格会上涨。"},
+{"type":"gameAdv","en":"Zombie villager can be cured.","cn":"僵尸村民可以被治愈。"},
+{"type":"gameAdv","en":"Throw splash weakness potion.","cn":"扔喷溅虚弱药水。"},
+{"type":"gameAdv","en":"Give golden apple to zombie villager.","cn":"给僵尸村民金苹果。"},
+{"type":"gameAdv","en":"Wait for turning back to villager.","cn":"等待变回普通村民。"},
+{"type":"gameAdv","en":"Cured villager gives big discount.","cn":"被治愈村民会给很大折扣。"},
+{"type":"gameAdv","en":"That is very useful trick.","cn":"这是非常实用小技巧。"},
+{"type":"gameAdv","en":"Let’s build huge storage room.","cn":"我们建造巨大储藏室。"},
+{"type":"gameAdv","en":"Sort items into different chests.","cn":"把物品分类放进不同箱子。"},
+{"type":"gameAdv","en":"One chest for ores.","cn":"一个箱子放矿石。"},
+{"type":"gameAdv","en":"One chest for building blocks.","cn":"一个箱子放建筑方块。"},
+{"type":"gameAdv","en":"Food chest stores all food.","cn":"食物箱存放全部食物。"},
+{"type":"gameAdv","en":"Tools and weapons in another chest.","cn":"工具武器放另一个箱子。"},
+{"type":"gameAdv","en":"Label chest with item frame.","cn":"用物品展示框给箱子贴标签。"},
+{"type":"gameAdv","en":"Now we know what is inside.","cn":"现在我们就知道里面是什么。"},
+{"type":"gameAdv","en":"Everything is neat and tidy.","cn":"全部整整齐齐。"},
+{"type":"gameAdv","en":"I love our big storage room.","cn":"我喜欢我们的大储藏室。"},
+{"type":"gameAdv","en":"We have collected so many things.","cn":"我们收集了好多东西。"},
+{"type":"gameAdv","en":"Our world becomes bigger and bigger.","cn":"我们的世界变得越来越大。"},
+{"type":"gameAdv","en":"We can build anything we imagine.","cn":"我们可以建造任何想象中的东西。"},
+{"type":"gameAdv","en":"Minecraft is full of surprise.","cn":"我的世界充满惊喜。"},
+{"type":"gameAdv","en":"Adventure waits for us ahead.","cn":"冒险在前方等待我们。"},
+{"type":"gameAdv","en":"Let’s keep exploring together.","cn":"让我们继续一起探险。"}
+];
+
+let showCn = true;
+let playIndex = -1;
+let currentTab = "all";
+let currentVoice = "aria";
+const listWrap = document.querySelector("#listWrap");
+const rateSlider = document.querySelector("#rateSlider");
+const rateShow = document.querySelector("#rateShow");
+const toggleCnBtn = document.querySelector("#toggleCnBtn");
+const randomBtn = document.querySelector("#randomBtn");
+const player = document.querySelector("#player");
+
+function pad(n){ return String(n).padStart(4,"0"); }
+
+//分类标签
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+        document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        currentTab = btn.dataset.type;
+        stopPlay();
+        renderAll();
+    };
+});
+
+//发音人切换
+document.querySelectorAll(".voice-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+        document.querySelectorAll(".voice-btn").forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        currentVoice = btn.dataset.voice;
+        if(playIndex >= 0) playByIndex(playIndex); // 换人重读当前句
+    };
+});
+
+function renderAll(){
+    listWrap.innerHTML = "";
+    let filterList = sentencePool;
+    if(currentTab !== "all"){
+        filterList = sentencePool.filter(s=>s.type === currentTab);
+    }
+    filterList.forEach((item)=>{
+        const realIdx = sentencePool.indexOf(item);
+        const div = document.createElement("div");
+        div.className = "sentence-item";
+        div.dataset.realIdx = realIdx;
+        div.innerHTML =
+            '<span class="spk">🔊</span>' +
+            '<div><div class="en-line">'+item.en+'</div>' +
+            '<div class="cn-line"'+(showCn?"":" style='display:none'")+'>'+item.cn+'</div></div>';
+        div.onclick = ()=>{
+            if(playIndex === realIdx && !player.paused){ stopPlay(); }
+            else playByIndex(realIdx);
+        };
+        listWrap.appendChild(div);
+    });
+}
+
+function playByIndex(idx){
+    playIndex = idx;
+    updatePlayingHighlight();
+    autoScroll(idx);
+    player.src = "audio/" + currentVoice + "/" + pad(idx) + ".mp3";
+    player.playbackRate = parseFloat(rateSlider.value);
+    player.play().catch(err=>{
+        console.warn("播放失败，请确认 audio 文件夹和网页在一起", err);
+    });
+}
+
+function stopPlay(){
+    player.pause();
+    player.currentTime = 0;
+    playIndex = -1;
+    updatePlayingHighlight();
+}
+
+player.onended = ()=>{ playIndex = -1; updatePlayingHighlight(); };
+
+function updatePlayingHighlight(){
+    document.querySelectorAll(".sentence-item").forEach(el=>{
+        if(Number(el.dataset.realIdx) === playIndex) el.classList.add("playing");
+        else el.classList.remove("playing");
+    });
+}
+
+function autoScroll(idx){
+    const el = document.querySelector('.sentence-item[data-real-idx="'+idx+'"]');
+    if(el && el.scrollIntoView) el.scrollIntoView({block:"nearest", behavior:"smooth"});
+}
+
+rateSlider.oninput = ()=>{
+    rateShow.innerText = rateSlider.value;
+    player.playbackRate = parseFloat(rateSlider.value);
+};
+
+toggleCnBtn.onclick = ()=>{
+    showCn = !showCn;
+    toggleCnBtn.innerText = showCn ? "隐藏中文翻译" : "显示中文翻译";
+    document.querySelectorAll(".cn-line").forEach(el=>{
+        el.style.display = showCn ? "block" : "none";
+    });
+};
+
+randomBtn.onclick = ()=>{
+    let filterList = sentencePool;
+    if(currentTab !== "all") filterList = sentencePool.filter(s=>s.type === currentTab);
+    const item = filterList[Math.floor(Math.random()*filterList.length)];
+    playByIndex(sentencePool.indexOf(item));
+};
+
+renderAll();
+</script>
+</body>
+</html>
